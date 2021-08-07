@@ -1,4 +1,3 @@
-#define Sprintf(f, ...) ({ char* s; asprintf(&s, f, __VA_ARGS__); String r = s; free(s); r; })
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <WiFi.h>
@@ -15,6 +14,15 @@
 #include <list>
 using namespace std;
 
+#include "setting.h"
+
+#define Sprintf(f, ...) ({ char* s; asprintf(&s, f, __VA_ARGS__); String r = s; free(s); r; })
+
+#define ESPMAC (Sprintf("%06" PRIx64, ESP.getEfuseMac() >> 24)).c_str()
+#define HOST_NAME ROOM_NAME "-" FIRMWARE_NAME
+
+#define every(t) for (static uint32_t _lasttime; (uint32_t)((uint32_t) millis() - _lasttime) >= (t); _lasttime = millis())
+
 unsigned long interval;
 const int buttonpin  = 15;
 const int i2c_sda = 23;
@@ -23,7 +31,6 @@ const int ledpin = 26;
 int brightness;
 bool ota_enabled;
 
-NeoPixelBus<NeoGrbwFeature, Neo800KbpsMethod> led(2, ledpin);
 MQTTClient mqtt;
 String topic_prefix;
 bool add_units;
@@ -31,29 +38,6 @@ bool add_units;
 void retain(String topic, String message) {
     Serial.printf("%s %s\n", topic.c_str(), message.c_str());
     mqtt.publish(topic, message, true, 0);
-}
-
-void set_led(int r, int g, int b, int w = 0) {
-    led.ClearTo(RgbwColor(r, g, b, w));
-    led.Show();
-}
-
-void ledstatus_connecting() { 
-    set_led(0, 0, abs(sin(.001 * millis())*brightness));
-}
-
-void ledstatus_portal() {
-    float b = brightness ? brightness : 80;
-    set_led(abs(sin(.001 * millis()) * 2*b), abs(cos(.001 * millis()) * b), 0);
-}
-
-void ledstatus_alarm() {
-    float b = brightness ? 2 * brightness : 160;
-    set_led(b, 0, 0);
-}
-
-void ledstatus_idle() {
-    set_led(0, 0, 0, brightness/4);
 }
 
 #define FN function<void()>
@@ -143,10 +127,6 @@ void setup_sensors() {
                 if (!CO2) return;
 
                 self.publish(String(CO2), "PPM");
-                if (alarm_level) {
-                    if (CO2 >= alarm_level) ledstatus_alarm();
-                    else ledstatus_idle();
-                }
             }
         };
         snuffels.push_back(s);
@@ -218,14 +198,7 @@ void setup_sensors() {
 void setup_ota() {
     ArduinoOTA.setHostname(WiFiSettings.hostname.c_str());
     ArduinoOTA.setPassword(WiFiSettings.password.c_str());
-    ArduinoOTA.onStart(   []()              { set_led(  0,  0, 100); });
-    ArduinoOTA.onEnd(     []()              { set_led(  0, 50,   0); });
-    ArduinoOTA.onError(   [](ota_error_t e) { set_led(100,  0,   0); });
-    ArduinoOTA.onProgress([](unsigned int p, unsigned int t) {
-        static bool x; x = !x; set_led(0, 0, x*50);
-    });
     ArduinoOTA.begin();
-
 }
 
 void check_button() {
@@ -240,9 +213,6 @@ void setup() {
     SPIFFS.begin(true);
     Wire.begin(i2c_sda, i2c_scl);
     pinMode(buttonpin, INPUT);
-
-    //led.Begin();
-    set_led(0, 0, 0);
 
     setup_sensors();
 
@@ -265,15 +235,12 @@ void setup() {
 
     WiFiSettings.onWaitLoop = []() {
         check_button();
-        ledstatus_connecting();
         return 50;
     };
     WiFiSettings.onPortalWaitLoop = []() {
-        ledstatus_portal();
         if (ota_enabled) ArduinoOTA.handle();
     };
     if (!WiFiSettings.connect(false)) ESP.restart();
-    ledstatus_idle();
 
     for (auto& s : snuffels) if (s.enabled && s.init) s.init();
 
