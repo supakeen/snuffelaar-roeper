@@ -23,7 +23,7 @@ const int ledpin = 26;
 int brightness;
 bool ota_enabled;
 
-NeoPixelBus<NeoGrbwFeature, Neo800KbpsMethod> led(1, ledpin);
+NeoPixelBus<NeoGrbwFeature, Neo800KbpsMethod> led(2, ledpin);
 MQTTClient mqtt;
 String topic_prefix;
 bool add_units;
@@ -74,7 +74,7 @@ struct SnuffelSensor {
         String name = topic_suffix;
         for (auto i : mapping) topic.replace(i.first, i.second);
         for (auto i : mapping) name.replace(i.first, i.second);
-        retain(topic, name + ",room=bedroom value=" + (add_units ? (value + " " + unit) : value));
+        retain(topic, name + ",room=study value=" + (add_units ? (value + " " + unit) : value));
     }
     void publish(String value, String unit) {
         publish({ }, value, unit);
@@ -241,7 +241,7 @@ void setup() {
     Wire.begin(i2c_sda, i2c_scl);
     pinMode(buttonpin, INPUT);
 
-    led.Begin();
+    //led.Begin();
     set_led(0, 0, 0);
 
     setup_sensors();
@@ -278,6 +278,8 @@ void setup() {
     for (auto& s : snuffels) if (s.enabled && s.init) s.init();
 
     static WiFiClient wificlient;
+    Serial.print("Connecting MQTT");
+    Serial.println(server);
     mqtt.begin(server.c_str(), port, wificlient);
 
     if (ota_enabled) setup_ota();
