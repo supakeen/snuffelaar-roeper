@@ -106,7 +106,7 @@ struct SnuffelSensor {
         String name = topic_suffix;
         for (auto i : mapping) topic.replace(i.first, i.second);
         for (auto i : mapping) name.replace(i.first, i.second);
-        retain(topic, name + ",room=study value=" + (add_units ? (value + " " + unit) : value));
+        retain(topic, name + ",room=" + ROOM_NAME + " value=" + (add_units ? (value + " " + unit) : value));
     }
     void publish(String value, String unit) {
         publish({ }, value, unit);
@@ -125,7 +125,7 @@ void setup_sensors() {
             enabled: false,  // enabled by default via WiFiSettings
             id: "DS18B20",
             description: "temperature sensor(s)",
-            topic_suffix: "temperature/{index}",
+            topic_suffix: "temperature",
             settings: NULL,
             init: []() {
                 sensors.begin();
