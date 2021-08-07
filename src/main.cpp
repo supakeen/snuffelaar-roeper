@@ -31,9 +31,57 @@ const int ledpin = 26;
 int brightness;
 bool ota_enabled;
 
-MQTTClient mqtt;
+MQTTClient mqtt(256);
 String topic_prefix;
 bool add_units;
+
+/* Say hello to our MQTT server. */
+void say_hello() {
+    String topic = Sprintf(
+        "/debug/hello/%s/%s",
+        ROOM_NAME,
+        FIRMWARE_NAME
+    );
+
+    String payload = Sprintf(
+        "room=%s firmware=%s,ip=%s,hostname=%s,mac=%s",
+        ROOM_NAME,
+        FIRMWARE_NAME,
+        WiFi.localIP().toString().c_str(),
+        HOST_NAME,
+        ESPMAC
+    );
+
+    if(!mqtt.publish(topic, payload, true, 0)) {
+        Serial.println("say_hello: failed publishing message");
+    } else {
+        Serial.println("say_hello: said hello");
+    }
+}
+
+/* Say ping to our MQTT server. */
+void say_ping() {
+    String topic = Sprintf(
+        "/debug/ping/%s/%s",
+        ROOM_NAME,
+        FIRMWARE_NAME
+    );
+
+    String payload = Sprintf(
+        "room=%s firmware=%s,ip=%s,hostname=%s,mac=%s",
+        ROOM_NAME,
+        FIRMWARE_NAME,
+        WiFi.localIP().toString().c_str(),
+        HOST_NAME,
+        ESPMAC
+    );
+
+    if(!mqtt.publish(topic, payload, false, 0)) {
+        Serial.println("say_ping: failed publishing message");
+    } else {
+        Serial.println("say_ping: sent ping");
+    }
+}
 
 void retain(String topic, String message) {
     Serial.printf("%s %s\n", topic.c_str(), message.c_str());
@@ -252,17 +300,51 @@ void setup() {
     if (ota_enabled) setup_ota();
 }
 
+void connect_mqtt() {
+    Serial.println(
+        Sprintf("connect_mqtt: connecting to %s:%d", MQTT_SERVER, MQTT_PORT)
+    );
+
+    int cycles = 30;
+
+    while(!mqtt.connect(HOST_NAME)) {
+        delay(500);
+
+        if(cycles-- <= 0) ESP.restart();
+    }
+
+    say_hello();
+}
+
+void loop_mqtt() {
+    mqtt.loop();
+
+    if(!mqtt.connected()) {
+        Serial.println(
+            Sprintf(
+                "loop_mqtt: lost connection to %s:%d, reconnecting",
+                MQTT_SERVER,
+                MQTT_PORT
+            )
+        );
+
+        connect_mqtt();
+    }
+}
+
 void loop() {
     unsigned long start = millis();
 
     if (ota_enabled) ArduinoOTA.handle();
 
-    if (!mqtt.connected()) mqtt.connect("");  // ignore failures
+    loop_mqtt();
 
     for (auto& s : snuffels) if (s.enabled && s.prepare) s.prepare();
     for (auto& s : snuffels) if (s.enabled && s.fetch)   s.fetch(s);
 
     while (millis() < start + interval) check_button();
+
+    every(5 * 1000) say_ping();
 }
 
 
