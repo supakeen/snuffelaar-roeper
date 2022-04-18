@@ -1,6 +1,9 @@
 # snuffelaar-roeper
 
-Firmware for [Snuffelaar](https://revspace.nl/Snuffelaar) to push the sensor values to MQTT.
+Firmware for [Snuffelaar](https://revspace.nl/Snuffelaar) to push the sensor,
+values to MQTT. Forked initially from the [Snuffelding](https://github.com/Juerd/Snuffelding)
+repository by [Juerd](https://github.com/Juerd) however I lost the fork
+metadata somewhere across repo moves.
 
 Intended to be used with PlatformIO, which will automatically grab the necessary libraries.
 Probably works with the Arduino IDE, but you'd have to install numerous libraries manually.
