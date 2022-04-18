@@ -1,4 +1,4 @@
-# Snuffelding
+# snuffelaar-roeper
 
 Firmware for [Snuffelaar](https://revspace.nl/Snuffelaar) to push the sensor values to MQTT.
 
@@ -26,3 +26,8 @@ Just connect to `esp-123abc` and go to http://192.168.4.1/. Hint: use a smartpho
 
 ArduinoOTA is disabled by default. It can be enabled using the portal. Don't forget to edit
 `platformio.ini` with your hostname and password.
+
+## Name
+
+The name *Snuffelaar* is based on the board name it means *sniffer*. The word
+*roeper* means yeller.
